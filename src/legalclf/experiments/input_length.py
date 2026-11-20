@@ -5,8 +5,10 @@ Usage:
 
 For each input length k: truncate train/dev/test to the first k words, fit TF-IDF on train,
 grid-search lr x weight_decay on dev, then evaluate the best model once on test.
-Outputs in `out_dir`: results.csv, per_class_f1.csv, search.csv, history.csv,
-confusion_<k>.csv, input_length.png and config.json.
+Outputs in `out_dir`: results.csv (all test metrics per k), per_class_f1.csv, search.csv,
+history.csv, input_length.png, per_class_vs_length.png, config.json, and for every k a folder
+k_<k>/ with the full evaluation report (metrics.json, per_class.csv with TP/FP/FN/TN,
+confusion matrix, ROC / PR curves, score histograms, threshold trade-off, training curve).
 """
 import argparse
 import json
@@ -21,8 +23,9 @@ import pandas as pd
 import torch
 import yaml
 
+from legalclf import plots
 from legalclf.data import encode_labels, load_splits
-from legalclf.evaluation import bootstrap_macro_f1, per_class_f1, scores
+from legalclf.evaluation import write_report
 from legalclf.features import make_tfidf, truncate_words
 from legalclf.models import logistic_regression as logreg
 from legalclf.preprocessing.build import LABELS, find_repo_root
@@ -37,7 +40,7 @@ def k_name(k: int | None) -> str:
     return "full" if k is None else str(k)
 
 
-def run_length(k: int | None, splits: dict, y: dict, cfg: dict, device: str) -> dict:
+def run_length(k: int | None, splits: dict, y: dict, cfg: dict, device: str, out_dir: Path) -> dict:
     """Search on dev for one input length; return the best model's test results and the search log."""
     texts = {s: truncate_words(df["text"], k) for s, df in splits.items()}
     vec = make_tfidf(cfg["tfidf"])
@@ -62,25 +65,23 @@ def run_length(k: int | None, splits: dict, y: dict, cfg: dict, device: str) -> 
                 best = (row, model)
 
     row, model = best
-    pred = logreg.predict(model, X["test"], device)
-    test = scores(y["test"], pred, len(LABELS))
-    low, high = bootstrap_macro_f1(splits["test"]["doc_id"], y["test"], pred, len(LABELS),
-                                   n=cfg["bootstrap"]["n"], seed=cfg["seed"])
+    k_dir = out_dir / f"k_{k_name(k)}"
+    proba = logreg.predict_proba(model, X["test"], device)
+    test = write_report(k_dir, y["test"], proba, LABELS, splits["test"]["doc_id"], probabilistic=True,
+                        bootstrap_n=cfg["bootstrap"]["n"], seed=cfg["seed"],
+                        title=f"Logistic regression, {'full articles' if k is None else f'first {k} words'}, test set")
+    best_history = pd.DataFrame([h for h in histories if h["lr"] == row["lr"] and h["weight_decay"] == row["weight_decay"]])
+    plots.training_curves(best_history, k_dir / "training_curve.png", f"lr={row['lr']}, weight_decay={row['weight_decay']}")
     result = {
         "k": k_name(k),
         "share_train_cut": float((splits["train"]["n_words"] > k).mean()) if k is not None else 0.0,
         "n_features": X["train"].shape[1],
         "lr": row["lr"], "weight_decay": row["weight_decay"], "best_epoch": row["best_epoch"],
         "dev_macro_f1": row["dev_macro_f1"],
-        "test_macro_f1": test["macro_f1"], "test_macro_f1_low": low, "test_macro_f1_high": high,
-        "test_accuracy": test["accuracy"],
+        **{f"test_{m}": v for m, v in test.items() if m != "n"},
     }
-    f1s = per_class_f1(y["test"], pred, len(LABELS))
-    confusion = pd.crosstab(pd.Categorical(np.array(LABELS)[y["test"]], categories=LABELS),
-                            pd.Categorical(np.array(LABELS)[pred], categories=LABELS),
-                            rownames=["true"], colnames=["pred"], dropna=False)
-    return {"result": result, "per_class": dict(zip(LABELS, f1s)), "confusion": confusion,
-            "search": search, "history": histories}
+    f1s = pd.read_csv(k_dir / "per_class.csv")["f1"]
+    return {"result": result, "per_class": dict(zip(LABELS, f1s)), "search": search, "history": histories}
 
 
 def plot(results: pd.DataFrame, path: Path) -> None:
@@ -88,14 +89,32 @@ def plot(results: pd.DataFrame, path: Path) -> None:
     fig, ax = plt.subplots(figsize=(6, 4))
     yerr = [results["test_macro_f1"] - results["test_macro_f1_low"],
             results["test_macro_f1_high"] - results["test_macro_f1"]]
-    ax.errorbar(x, results["test_macro_f1"], yerr=yerr, marker="o", capsize=3, label="test (95% doc bootstrap)")
-    ax.plot(x, results["dev_macro_f1"], marker="s", linestyle="--", label="dev (best of search)")
+    ax.errorbar(x, results["test_macro_f1"], yerr=yerr, marker="o", capsize=3, label="test macro-F1 (95% doc bootstrap)")
+    ax.plot(x, results["dev_macro_f1"], marker="s", linestyle="--", label="dev macro-F1 (best of search)")
+    ax.plot(x, results["test_accuracy"], marker="^", linestyle=":", label="test accuracy (= micro-F1)")
+    ax.plot(x, results["test_balanced_accuracy"], marker="v", linestyle=":", label="test balanced accuracy")
     ax.set_xticks(x, results["k"])
     ax.set_xlabel("Input length (first k words of the article)")
-    ax.set_ylabel("Macro-F1")
+    ax.set_ylabel("score")
     ax.set_title("Logistic regression: effect of input length")
     ax.grid(alpha=0.3)
     ax.legend()
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+
+
+def plot_per_class(per_class: pd.DataFrame, path: Path) -> None:
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    x = np.arange(len(per_class))
+    for label, name in zip(LABELS, plots.short(LABELS)):
+        ax.plot(x, per_class[label], marker="o", label=name)
+    ax.set_xticks(x, per_class["k"])
+    ax.set_xlabel("Input length (first k words of the article)")
+    ax.set_ylabel("Test F1")
+    ax.set_title("Per-class F1 by input length")
+    ax.grid(alpha=0.3)
+    ax.legend(fontsize=8, ncol=2)
     fig.tight_layout()
     fig.savefig(path, dpi=150)
     plt.close(fig)
@@ -118,19 +137,21 @@ def main() -> None:
 
     results, per_class, search, history = [], [], [], []
     for k in cfg["input_lengths"]:
-        out = run_length(k, splits, y, cfg, device)
+        out = run_length(k, splits, y, cfg, device, out_dir)
         r = out["result"]
         print(f"k={r['k']:>4}  test macro-F1={r['test_macro_f1']:.4f} "
-              f"[{r['test_macro_f1_low']:.4f}, {r['test_macro_f1_high']:.4f}]  accuracy={r['test_accuracy']:.4f}")
+              f"[{r['test_macro_f1_low']:.4f}, {r['test_macro_f1_high']:.4f}]  accuracy={r['test_accuracy']:.4f}  "
+              f"balanced acc={r['test_balanced_accuracy']:.4f}  macro ROC-AUC={r['test_macro_roc_auc']:.4f}")
         results.append(r)
         per_class.append({"k": r["k"], **out["per_class"]})
         search += out["search"]
         history += out["history"]
-        out["confusion"].to_csv(out_dir / f"confusion_{r['k']}.csv")
 
     results = pd.DataFrame(results)
     results.to_csv(out_dir / "results.csv", index=False)
-    pd.DataFrame(per_class).to_csv(out_dir / "per_class_f1.csv", index=False)
+    per_class = pd.DataFrame(per_class)
+    per_class.to_csv(out_dir / "per_class_f1.csv", index=False)
+    plot_per_class(per_class, out_dir / "per_class_vs_length.png")
     pd.DataFrame(search).to_csv(out_dir / "search.csv", index=False)
     pd.DataFrame(history).to_csv(out_dir / "history.csv", index=False)
     plot(results, out_dir / "input_length.png")
