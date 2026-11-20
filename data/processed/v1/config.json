@@ -1,0 +1,39 @@
+{
+  "config": {
+    "seed": 42,
+    "paths": {
+      "raw_dir": "data/raw/TurkCanon",
+      "out_dir": "data/processed/v1"
+    },
+    "cleaning": {
+      "mask": "remove",
+      "mask_placeholder": null,
+      "paragraph_numbers": "remove",
+      "max_words": 1000
+    },
+    "filters": {
+      "min_words": 5,
+      "boilerplate_max_words": 60
+    },
+    "cap": {
+      "train": 20,
+      "dev": 20,
+      "test": 20
+    },
+    "manual_check": {
+      "n": 100
+    }
+  },
+  "raw_files": {
+    "train.jsonl": "b8011231a578a1814c92d76607190db2",
+    "dev.jsonl": "055c3a35839029809b85d654c5930e58",
+    "test.jsonl": "2843d45f886887fd527da6a720506298"
+  },
+  "packages": {
+    "numpy": "2.5.5",
+    "pandas": "3.1.1",
+    "pyarrow": "26.0.1",
+    "pyyaml": "6.0.3"
+  },
+  "created": "2026-11-20"
+}

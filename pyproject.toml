@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "legalclf"
+version = "0.1.0"
+description = "Article-level legislation type classification on TurkCanon (CS464 Group 22)"
+requires-python = ">=3.10"
+dependencies = [
+    # Data processing
+    "numpy==2.5.5",
+    "pandas==3.1.1",
+    "pyarrow==26.0.1",
+    "pyyaml==6.0.3",
+    # Classical ML and plots
+    "scikit-learn==1.9.1",
+    "matplotlib==3.11.2",
+]
+
+[project.optional-dependencies]
+# Notebooks and tests
+dev = [
+    "jupyter==1.1.1",
+    "pytest==9.2.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

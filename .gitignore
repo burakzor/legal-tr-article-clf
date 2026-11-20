@@ -1,0 +1,30 @@
+# Raw data (TurkCanon jsonl; train.jsonl exceeds GitHub's 100 MB file limit)
+data/raw/
+
+# Processed data: ignored while preprocessing is iterated; remove this line once v1 is frozen
+#data/processed/
+
+# Large run artifacts (model files, predictions, extracted features)
+outputs/
+*.pt
+*.bin
+*.safetensors
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Environment / secrets
+.env
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+CLAUDE.md

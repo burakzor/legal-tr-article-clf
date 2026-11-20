@@ -1,0 +1,25 @@
+# Preprocessing settings for v1. Paths are relative to the repo root.
+# Changing anything here produces a different dataset: use a new out_dir for it.
+seed: 42
+
+paths:
+  raw_dir: data/raw/TurkCanon
+  out_dir: data/processed/v1
+
+cleaning:
+  mask: remove                # remove | placeholder
+  mask_placeholder: null      # text that replaces [MASK] when mask: placeholder
+  paragraph_numbers: remove   # remove | keep
+  max_words: 1000             # longer articles are truncated to their first max_words words
+
+filters:
+  min_words: 5                # articles shorter than this (after cleaning) are dropped
+  boilerplate_max_words: 60   # boilerplate pattern + fewer words than this -> dropped
+
+cap:                          # maximum articles taken from one document
+  train: 20
+  dev: 20
+  test: 20
+
+manual_check:
+  n: 100                      # random articles written to manual_check.csv
