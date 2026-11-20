@@ -16,6 +16,8 @@ dependencies = [
     # Classical ML and plots
     "scikit-learn==1.9.1",
     "matplotlib==3.11.2",
+    # Models (logistic regression now, transformers later)
+    "torch==2.15.0",
 ]
 
 [project.optional-dependencies]

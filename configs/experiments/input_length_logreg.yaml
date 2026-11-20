@@ -1,0 +1,26 @@
+# Experiment 2 (input length), logistic regression. Paths are relative to the repo root.
+# Each model sees only the first k words of every article (train, dev and test alike).
+seed: 42
+data_version: v1
+out_dir: outputs/input_length/logreg
+
+input_lengths: [5, 10, 20, 40, 80, 160, null]   # null = the whole article (max 1,000 words)
+
+tfidf:                          # fitted on train only, separately for each k
+  ngram_range: [1, 2]
+  min_df: 2
+  max_features: 100000
+  sublinear_tf: true
+
+model:
+  class_weight: balanced        # balanced | none
+  batch_size: 256
+  max_epochs: 30
+  patience: 3                   # epochs without dev macro-F1 improvement before stopping
+
+search:                         # grid searched on dev for every k; write floats as 1.0e-5 (YAML reads 1e-5 as text)
+  lr: [1.0e-2, 1.0e-3]
+  weight_decay: [0.0, 1.0e-6, 1.0e-5, 1.0e-4]
+
+bootstrap:
+  n: 1000                       # document-level resamples for the test macro-F1 interval
