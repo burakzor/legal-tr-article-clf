@@ -1,22 +1,26 @@
-# Experiment 2 (input length), Naive Bayes. Paths are relative to the repo root.
-# Same data, input lengths, TF-IDF settings and evaluation as input_length_logreg.yaml,
-# so the only difference from the logistic regression run is the model.
+# Experiment 2 (input length), Naive Bayes.
+# Run: python -m legalclf.classical.input_length --config configs/experiments/input_length_nb.yaml
 seed: 42
-data_version: v1
-out_dir: results/naive_bayes
+model: naive_bayes
+data_dir: data/processed/v1
+out_dir: outputs/input_length/naive_bayes
 
-input_lengths: [5, 10, 20, 40, 80, 160, null]   # null = the whole article (max 1,000 words)
+# First k words of each article (train, dev and test are all cut to k).
+# "full" = whole article (v1 already caps it at 1,000 words). Median article ≈ 70 words.
+lengths: [5, 10, 20, 40, 80, 160, 320, full]
 
-tfidf:                          # identical to input_length_logreg.yaml; fitted on train only, separately for each k
-  ngram_range: [1, 2]
-  min_df: 2
-  max_features: 100000
-  sublinear_tf: true
+tfidf:
+  fixed:              # passed to TfidfVectorizer as is (lowercasing is Turkish-aware)
+    min_df: 2
+    sublinear_tf: true
+  grid:               # tuned on dev for every length
+    ngram_range: [[1, 1], [1, 2]]
 
-search:                         # grid searched on dev for every k
-  variant: [multinomial, complement]   # ComplementNB is designed for imbalanced classes
+model_grid:           # tuned on dev for every length
+  variant: [multinomial, complement]  # ComplementNB is designed for imbalanced classes
   alpha: [0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
-  fit_prior: [true, false]             # MultinomialNB only; false = uniform class prior
+  fit_prior: [true, false]            # false = uniform class prior (MultinomialNB only)
 
-bootstrap:
-  n: 1000                       # document-level resamples for the test macro-F1 interval
+bootstrap:            # CI of test macro-F1, resampling documents
+  n: 1000
+  level: 0.95
