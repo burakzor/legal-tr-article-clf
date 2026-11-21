@@ -1,4 +1,0 @@
-model,full_article_test_macro_f1,words_for_90pct,words_for_95pct
-Logistic regression,0.5204,40,40
-Naive Bayes,0.4867,40,160
-Linear SVM,0.5405,40,80
