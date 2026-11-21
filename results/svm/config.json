@@ -1,0 +1,52 @@
+{
+  "config": {
+    "seed": 42,
+    "data_version": "v1",
+    "out_dir": "outputs/svm",
+    "tfidf": {
+      "ngram_range": [
+        1,
+        2
+      ],
+      "min_df": 2,
+      "max_features": 100000,
+      "sublinear_tf": true
+    },
+    "model": {
+      "max_iter": 5000
+    },
+    "search": {
+      "C": [
+        0.01,
+        0.03,
+        0.1,
+        0.3,
+        1.0,
+        3.0
+      ],
+      "class_weight": [
+        "balanced",
+        "none"
+      ]
+    },
+    "fusion": {
+      "folds": 5
+    },
+    "bootstrap": {
+      "n": 1000
+    }
+  },
+  "created": "2026-11-21",
+  "selected": {
+    "C": 0.3,
+    "class_weight": "balanced",
+    "dev_macro_f1": 0.5250297533740862
+  },
+  "out_of_fold_train_macro_f1": 0.5552888753815479,
+  "packages": {
+    "numpy": "2.5.5",
+    "pandas": "3.1.1",
+    "scikit-learn": "1.9.1",
+    "scipy": "1.18.1"
+  }
+}
