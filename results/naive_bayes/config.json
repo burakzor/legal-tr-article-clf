@@ -1,0 +1,57 @@
+{
+  "config": {
+    "seed": 42,
+    "data_version": "v1",
+    "out_dir": "results/naive_bayes",
+    "input_lengths": [
+      5,
+      10,
+      20,
+      40,
+      80,
+      160,
+      null
+    ],
+    "tfidf": {
+      "ngram_range": [
+        1,
+        2
+      ],
+      "min_df": 2,
+      "max_features": 100000,
+      "sublinear_tf": true
+    },
+    "search": {
+      "variant": [
+        "multinomial",
+        "complement"
+      ],
+      "alpha": [
+        0.0001,
+        0.0003,
+        0.001,
+        0.003,
+        0.01,
+        0.03,
+        0.1,
+        0.3,
+        1.0,
+        3.0,
+        10.0
+      ],
+      "fit_prior": [
+        true,
+        false
+      ]
+    },
+    "bootstrap": {
+      "n": 1000
+    }
+  },
+  "created": "2026-11-21",
+  "packages": {
+    "numpy": "2.5.5",
+    "pandas": "3.1.1",
+    "scikit-learn": "1.9.1"
+  }
+}
