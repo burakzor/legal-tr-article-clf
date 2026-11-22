@@ -1,0 +1,17 @@
+# Experiment 2 (input length): side-by-side comparison of the three classical models.
+# Reads the outputs of input_length_logreg.yaml, input_length_naive_bayes.yaml and
+# input_length_svm.yaml; trains nothing. Paths are relative to the repo root.
+out_dir: results/input_length_comparison
+
+models:                         # name shown in figures and tables -> results folder of its input length run
+  Logistic regression: results/logreg
+  Naive Bayes: results/naive_bayes
+  Linear SVM: results/svm/svm_input_length
+
+hyperparameters:                # columns of results.csv that hold the selected hyperparameters
+  Logistic regression: [lr, weight_decay, best_epoch]
+  Naive Bayes: [variant, alpha, fit_prior]
+  Linear SVM: [C, class_weight]
+
+thresholds: [0.9, 0.95]         # share of the full-article macro-F1 for the "words needed" table
+confusion_lengths: ["5", full]  # input lengths shown in the confusion matrix figure
